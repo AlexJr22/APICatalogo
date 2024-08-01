@@ -42,9 +42,6 @@ public class ProdutosController : ControllerBase
     {
         var produtos = _unitOfWork.produtosRepository.GetAll();
 
-        if (produtos is null)
-            return NotFound();
-
         var produtosDto = _mapper.Map<IEnumerable<ProdutoDTO>>(produtos);
 
         return Ok(produtosDto);
@@ -55,8 +52,13 @@ public class ProdutosController : ControllerBase
     {
         var produtos = _unitOfWork.produtosRepository.GetProdutos(_params);
 
+        return ObterProdutos(produtos);
+    }
+
+    private ActionResult<IEnumerable<ProdutoDTO>> ObterProdutos(PageList<Produto>? produtos)
+    {
         if (produtos is null)
-            return BadRequest();
+            return NotFound();
 
         var metadata = new
         {
@@ -71,6 +73,15 @@ public class ProdutosController : ControllerBase
         Response.Headers.Append("X-Pagination", JsonConvert.SerializeObject(metadata));
 
         return Ok(_mapper.Map<IEnumerable<ProdutoDTO>>(produtos));
+    }
+
+    [HttpGet("filter/preco/pagination")]
+    public ActionResult<IEnumerable<ProdutoDTO>> GetProdutosFilterPreco(
+        [FromQuery] ProdutoFiltroPreco produtoFiltroPreco)
+    {
+        var produtos = _unitOfWork.produtosRepository.GetProdutoFiltroPreco(produtoFiltroPreco);
+
+        return ObterProdutos(produtos);
     }
 
     [HttpGet("{id:int}", Name = "ObterProduto")]
