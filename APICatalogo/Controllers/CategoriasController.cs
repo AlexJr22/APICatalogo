@@ -62,6 +62,11 @@ public class CategoriasController : ControllerBase
     {
         var categorias = _unitOfWork.categoriaRepository.GetCategorias(_params);
 
+        return ObterCategorias(categorias);
+    }
+
+    private ActionResult<IEnumerable<CategoriaDTO>> ObterCategorias(PageList<Categoria>? categorias)
+    {
         if (categorias is null)
             return BadRequest();
 
@@ -80,6 +85,14 @@ public class CategoriasController : ControllerBase
         var categotiasDto = categorias.ListCategoriaDTO();
 
         return Ok(categotiasDto);
+    }
+
+    [HttpGet("filter/nome/pagination")]
+    public ActionResult<IEnumerable<CategoriaDTO>> GetCategoriasFiltradas([FromQuery] CategoriaFiltroNome filtroNome)
+    {
+        var categorias = _unitOfWork.categoriaRepository.GetCategoriasFiltroNome(filtroNome);
+
+        return ObterCategorias(categorias);
     }
 
     [HttpPost]

@@ -17,4 +17,19 @@ public class CategoriaRepository(AppDbContext context)
 
         return categoriasOrdenadas;
     }
+
+    PageList<Categoria> ICategoriaRepository.GetCategoriasFiltroNome(CategoriaFiltroNome filtroNome)
+    {
+        var categorias = GetAll().AsQueryable();
+
+        if (!string.IsNullOrEmpty(filtroNome.Nome))
+        {
+            categorias = categorias.Where(c => c.Nome.Contains(filtroNome.Nome));
+        }
+
+        var categoriasFiltradas = PageList<Categoria>
+            .ToPageDLis(categorias, filtroNome.PageNumber, filtroNome.PageSize);
+
+        return categoriasFiltradas;
+    }
 }
