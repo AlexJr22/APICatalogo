@@ -7,51 +7,46 @@ namespace APICatalogo.Repositories;
 public class ProdutosRepository(AppDbContext context)
     : Repository<Produto>(context), IProdutosRepository
 {
-    //public IEnumerable<Produto> GetProdutos(ProdutosParameters parameters)
-    //{
-    //    return GetAll()
-    //        .OrderBy(prod => prod.Nome)
-    //        .Skip((parameters.PageNumber - 1) * parameters.PageSize)
-    //        .Take(parameters.PageSize)
-    //        .ToList();
-    //}
-
-    public PageList<Produto> GetProdutos(ProdutosParameters parameters)
+    public async Task<PageList<Produto>> GetProdutosAsync(ProdutosParameters parameters)
     {
-        var produtos = GetAll()
-            .OrderBy(p => p.ProdutoId).AsQueryable();
+        var produtos = await GetAllAsync();
 
-        var produtosOrdenados = PageList<Produto>
-            .ToPageDLis(produtos, parameters.PageNumber, parameters.PageSize);
+        var produtosOrdenados = produtos.OrderBy(p => p.ProdutoId).AsQueryable();
+
+        var resultado = PageList<Produto>
+            .ToPageDLis(produtosOrdenados, parameters.PageNumber, parameters.PageSize);
+
+        return resultado;
+    }
+
+    public async Task<IEnumerable<Produto>> GetProdutosPorCategoriaAsync(int id)
+    {
+        var produtos = await GetAllAsync();
+        var produtosOrdenados = produtos.Where(c => c.CategoriaId == id);
 
         return produtosOrdenados;
     }
 
-    public IEnumerable<Produto> GetProdutosPorCategoria(int id)
+    public async Task<PageList<Produto>> GetProdutoFiltroPrecoAsync(ProdutoFiltroPreco filtroPreco)
     {
-        return GetAll().Where(c => c.CategoriaId == id);
-    }
+        var resultado = await GetAllAsync();
 
-    public PageList<Produto> GetProdutoFiltroPreco(ProdutoFiltroPreco filtroPreco)
-    {
-        var produtos = GetAll().AsQueryable();
+        var produtos = resultado.AsQueryable();
 
         if (filtroPreco.Preco.HasValue && !string.IsNullOrEmpty(filtroPreco.PrecoCriterio))
         {
             if (filtroPreco.PrecoCriterio.Equals("maior", StringComparison.OrdinalIgnoreCase))
-            {
                 produtos = produtos.Where(p => p.Preco > filtroPreco.Preco.Value).OrderBy(p => p.Preco);
-            }
-            else if (filtroPreco.PrecoCriterio.Equals("menor", StringComparison.OrdinalIgnoreCase))
-            {
+
+            if (filtroPreco.PrecoCriterio.Equals("menor", StringComparison.OrdinalIgnoreCase))
                 produtos = produtos.Where(p => p.Preco < filtroPreco.Preco.Value).OrderBy(p => p.Preco);
-            }
-            else if (filtroPreco.PrecoCriterio.Equals("igual", StringComparison.OrdinalIgnoreCase))
-            {
+
+            if (filtroPreco.PrecoCriterio.Equals("igual", StringComparison.OrdinalIgnoreCase))
                 produtos = produtos.Where(p => p.Preco == filtroPreco.Preco.Value).OrderBy(p => p.Preco);
-            }
         }
+
         var produtosFiltrados = PageList<Produto>.ToPageDLis(produtos, filtroPreco.PageNumber, filtroPreco.PageSize);
+
         return produtosFiltrados;
     }
 }

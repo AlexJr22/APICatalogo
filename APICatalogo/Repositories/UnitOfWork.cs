@@ -17,7 +17,7 @@ public class UnitOfWork : IUnitOfWork
     {
         get
         {
-            return _produtosRepository = _produtosRepository ?? new ProdutosRepository(_context);
+            return _produtosRepository ??= new ProdutosRepository(_context);
         }
     }
 
@@ -25,13 +25,13 @@ public class UnitOfWork : IUnitOfWork
     {
         get
         {
-            return _categoriaRepository = _categoriaRepository ?? new CategoriaRepository(_context);
+            return _categoriaRepository ??= new CategoriaRepository(_context);
         }
     }
 
-    public void Commit()
+    public async Task CommitAsync()
     {
-        _context.SaveChanges();
+        await _context.SaveChangesAsync();
     }
 
     public void Dispose()

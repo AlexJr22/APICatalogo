@@ -1,26 +1,29 @@
 ﻿using APICatalogo.Context;
 using APICatalogo.Models;
 using APICatalogo.Pagination;
+using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace APICatalogo.Repositories;
 
 public class CategoriaRepository(AppDbContext context)
     : Repository<Categoria>(context), ICategoriaRepository
 {
-    public PageList<Categoria> GetCategorias(CategoriasParameters parameters)
+    public async Task<PageList<Categoria>> GetCategoriasAsync(CategoriasParameters parameters)
     {
-        var categorias = GetAll()
-            .OrderBy(p => p.CategoriaId).AsQueryable();
+        var categorias = await GetAllAsync();
 
-        var categoriasOrdenadas = PageList<Categoria>
-            .ToPageDLis(categorias, parameters.PageNumber, parameters.PageSize);
+        var categoriasOrdenadas = categorias
+            .OrderBy(categoria => categoria.CategoriaId).AsQueryable();
 
-        return categoriasOrdenadas;
+        var resultado = PageList<Categoria>
+            .ToPageDLis(categoriasOrdenadas, parameters.PageNumber, parameters.PageSize);
+
+        return resultado;
     }
 
-    PageList<Categoria> ICategoriaRepository.GetCategoriasFiltroNome(CategoriaFiltroNome filtroNome)
+    public async Task<PageList<Categoria>> GetCategoriasFiltroNomeAsync(CategoriaFiltroNome filtroNome)
     {
-        var categorias = GetAll().AsQueryable();
+        var categorias = await GetAllAsync();
 
         if (!string.IsNullOrEmpty(filtroNome.Nome))
         {
@@ -28,7 +31,7 @@ public class CategoriaRepository(AppDbContext context)
         }
 
         var categoriasFiltradas = PageList<Categoria>
-            .ToPageDLis(categorias, filtroNome.PageNumber, filtroNome.PageSize);
+            .ToPageDLis(categorias.AsQueryable(), filtroNome.PageNumber, filtroNome.PageSize);
 
         return categoriasFiltradas;
     }

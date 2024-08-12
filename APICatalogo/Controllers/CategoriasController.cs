@@ -26,9 +26,9 @@ public class CategoriasController : ControllerBase
     }
 
     [HttpGet]
-    public ActionResult<IEnumerable<CategoriaDTO>> Get()
+    public async Task<ActionResult<IEnumerable<CategoriaDTO>>> Get()
     {
-        var categorias = _unitOfWork.categoriaRepository.GetAll();
+        var categorias = await _unitOfWork.categoriaRepository.GetAllAsync();
 
         if (categorias is null)
             return NotFound();
@@ -39,10 +39,10 @@ public class CategoriasController : ControllerBase
     }
 
     [HttpGet("{id:int}", Name = "ObterCategoria")]
-    public ActionResult<CategoriaDTO> Get(int id)
+    public async Task<ActionResult<CategoriaDTO>> Get(int id)
     {
-        var categoria = _unitOfWork.categoriaRepository.Get(
-            cat => cat.CategoriaId == id);
+        var categoria = await _unitOfWork.categoriaRepository.GetAsync(
+            categ => categ.CategoriaId == id);
 
         if (categoria is null)
         {
@@ -58,9 +58,9 @@ public class CategoriasController : ControllerBase
     }
 
     [HttpGet("pagination")]
-    public ActionResult<IEnumerable<CategoriaDTO>> Get([FromQuery]CategoriasParameters _params)
+    public async Task<ActionResult<IEnumerable<CategoriaDTO>>> Get([FromQuery]CategoriasParameters _params)
     {
-        var categorias = _unitOfWork.categoriaRepository.GetCategorias(_params);
+        var categorias = await _unitOfWork.categoriaRepository.GetCategoriasAsync(_params);
 
         return ObterCategorias(categorias);
     }
@@ -88,15 +88,15 @@ public class CategoriasController : ControllerBase
     }
 
     [HttpGet("filter/nome/pagination")]
-    public ActionResult<IEnumerable<CategoriaDTO>> GetCategoriasFiltradas([FromQuery] CategoriaFiltroNome filtroNome)
+    public async Task<ActionResult<IEnumerable<CategoriaDTO>>> GetCategoriasFiltradas([FromQuery] CategoriaFiltroNome filtroNome)
     {
-        var categorias = _unitOfWork.categoriaRepository.GetCategoriasFiltroNome(filtroNome);
+        var categorias = await _unitOfWork.categoriaRepository.GetCategoriasFiltroNomeAsync(filtroNome);
 
         return ObterCategorias(categorias);
     }
 
     [HttpPost]
-    public ActionResult<CategoriaDTO> Post(CategoriaDTO categoriaDto)
+    public async Task<ActionResult<CategoriaDTO>> Post(CategoriaDTO categoriaDto)
     {
         if (categoriaDto is null)
         {
@@ -107,7 +107,7 @@ public class CategoriasController : ControllerBase
         var categoria = categoriaDto.ToCategoria();
 
         var newCategoria = _unitOfWork.categoriaRepository.Create(categoria);
-        _unitOfWork.Commit();
+        await _unitOfWork.CommitAsync();
 
         var newCategoriaDto = categoria.ToCategoriaDTO();
 
@@ -118,7 +118,7 @@ public class CategoriasController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    public ActionResult<CategoriaDTO> Put(int id, CategoriaDTO categoriaDto)
+    public async Task<ActionResult<CategoriaDTO>> Put(int id, CategoriaDTO categoriaDto)
     {
         if (id != categoriaDto.CategoriaId)
             return BadRequest("Dados inválidos");
@@ -126,15 +126,15 @@ public class CategoriasController : ControllerBase
         var categoria = categoriaDto.ToCategoria();
 
         _unitOfWork.categoriaRepository.Update(categoria);
-        _unitOfWork.Commit();
+        await _unitOfWork.CommitAsync();
 
         return Ok(categoriaDto);
     }
 
     [HttpDelete("{id:int}")]
-    public ActionResult<CategoriaDTO> Delete(int id)
+    public async Task<ActionResult<CategoriaDTO>> Delete(int id)
     {
-        var categoria = _unitOfWork.categoriaRepository.Get(c => c.CategoriaId == id);
+        var categoria = await _unitOfWork.categoriaRepository.GetAsync(c => c.CategoriaId == id);
 
         if (categoria is null)
         {
