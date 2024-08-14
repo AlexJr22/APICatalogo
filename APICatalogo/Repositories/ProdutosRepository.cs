@@ -1,20 +1,22 @@
 ﻿using APICatalogo.Context;
 using APICatalogo.Models;
 using APICatalogo.Pagination;
+using X.PagedList;
 
 namespace APICatalogo.Repositories;
 
 public class ProdutosRepository(AppDbContext context)
     : Repository<Produto>(context), IProdutosRepository
 {
-    public async Task<PageList<Produto>> GetProdutosAsync(ProdutosParameters parameters)
+    public async Task<IPagedList<Produto>> GetProdutosAsync(ProdutosParameters parameters)
     {
         var produtos = await GetAllAsync();
 
-        var produtosOrdenados = produtos.OrderBy(p => p.ProdutoId).AsQueryable();
+        var produtosOrdenados = produtos
+            .OrderBy(p => p.ProdutoId).AsQueryable();
 
-        var resultado = PageList<Produto>
-            .ToPageDLis(produtosOrdenados, parameters.PageNumber, parameters.PageSize);
+        var resultado = await produtosOrdenados.ToPagedListAsync(
+            parameters.PageNumber, parameters.PageSize);
 
         return resultado;
     }
@@ -27,7 +29,7 @@ public class ProdutosRepository(AppDbContext context)
         return produtosOrdenados;
     }
 
-    public async Task<PageList<Produto>> GetProdutoFiltroPrecoAsync(ProdutoFiltroPreco filtroPreco)
+    public async Task<IPagedList<Produto>> GetProdutoFiltroPrecoAsync(ProdutoFiltroPreco filtroPreco)
     {
         var resultado = await GetAllAsync();
 
@@ -45,7 +47,7 @@ public class ProdutosRepository(AppDbContext context)
                 produtos = produtos.Where(p => p.Preco == filtroPreco.Preco.Value).OrderBy(p => p.Preco);
         }
 
-        var produtosFiltrados = PageList<Produto>.ToPageDLis(produtos, filtroPreco.PageNumber, filtroPreco.PageSize);
+        var produtosFiltrados = await produtos.ToPagedListAsync(filtroPreco.PageNumber, filtroPreco.PageSize);
 
         return produtosFiltrados;
     }
