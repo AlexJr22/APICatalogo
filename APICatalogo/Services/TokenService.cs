@@ -26,7 +26,7 @@ namespace APICatalogo.Services
                 Issuer = _config.GetSection("JWT").GetValue<string>("ValidIssuer"),
                 SigningCredentials = singningCredentials,
             };
-                
+
             var tokenHandler = new JwtSecurityTokenHandler();
             var token = tokenHandler.CreateJwtSecurityToken(tokenCredentials);
 
@@ -35,19 +35,41 @@ namespace APICatalogo.Services
 
         public string GenerateRefreshToken()
         {
-            var secureRandomBytess = new byte[128];
+            var secureRandomBytes = new byte[128];
 
             using var randomNumberGenerator = RandomNumberGenerator.Create();
-            RandomNumberGenerator.GetBytes(secureRandomBytess);
+            randomNumberGenerator.GetBytes(secureRandomBytes);
 
-            var refreshToken = Convert.ToBase64String(secureRandomBytess);
+            var refreshToken = Convert.ToBase64String(secureRandomBytes);
 
             return refreshToken;
         }
 
         public ClaimsPrincipal GetPrincipalFromExpiredToKen(string token, IConfiguration _config)
         {
-            throw new NotImplementedException();
+            var secreteKey = _config["JWT:SecreteKey"] ??
+                throw new InvalidOperationException("Invalid Secrete Key");
+
+            var tokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateAudience = false,
+                ValidateIssuer = false,
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secreteKey)),
+                ValidateLifetime = false
+            };
+
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var principal = tokenHandler.ValidateToken(token, tokenValidationParameters, out SecurityToken securetyToken);
+
+            if (securetyToken is not JwtSecurityToken jwtSecurityToken ||
+                !jwtSecurityToken.Header.Alg.Equals(
+                    SecurityAlgorithms.HmacSha256, StringComparison.InvariantCulture))
+            {
+                throw new SecurityTokenException("Invalid token");
+            }
+
+            return principal;
         }
     }
 }
