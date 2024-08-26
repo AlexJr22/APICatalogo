@@ -1,6 +1,7 @@
 ﻿using APICatalogo.DTOs;
 using APICatalogo.Models;
 using APICatalogo.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -81,7 +82,7 @@ namespace APICatalogo.Controllers
 
             if (userExists is not null)
             {
-                return StatusCode(StatusCodes.Status500InternalServerError, 
+                return StatusCode(StatusCodes.Status500InternalServerError,
                     new Response { Status = "Erro", Messege = "user already exists!" });
             }
 
@@ -96,7 +97,7 @@ namespace APICatalogo.Controllers
 
             if (!result.Succeeded)
             {
-                return StatusCode(StatusCodes.Status500InternalServerError, 
+                return StatusCode(StatusCodes.Status500InternalServerError,
                     new Response { Messege = "User creation Failed!", Status = "500" });
             }
 
@@ -125,7 +126,7 @@ namespace APICatalogo.Controllers
                 return BadRequest("Invalid access token/refresh token");
             }
 
-            string username = principal.Identity.Name;
+            var username = principal.Identity!.Name;
 
             var user = await userManager.FindByNameAsync(username!);
 
@@ -149,6 +150,23 @@ namespace APICatalogo.Controllers
                 accessToken = new JwtSecurityTokenHandler().WriteToken(newAccessToken),
                 refreshToken = newRefreshToken,
             });
+        }
+
+        [Authorize]
+        [HttpPost]
+        [Route("revoke/{username}")]
+        public async Task<IActionResult> Revoke(string username)
+        {
+            var user = await userManager.FindByNameAsync(username);
+         
+            if (user is null)
+                return BadRequest("Invalid user name");
+
+            user.RefreshToken = null;
+
+            await userManager.UpdateAsync(user);
+
+            return NoContent();
         }
     }
 }
