@@ -31,9 +31,9 @@ builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "apicatalogo", Version = "v1" });
 
-    c.AddSecurityDefinition("bearer", new OpenApiSecurityScheme()
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme()
     {
-        Name = "Authorization", 
+        Name = "Authorization",
         Type = SecuritySchemeType.ApiKey,
         Scheme = "Bearer",
         BearerFormat = "JWT",
@@ -72,6 +72,7 @@ builder.Services.AddAuthorization();
 //builder.Services.AddAuthentication("Bearer").AddJwtBearer();
 builder.Services.AddScoped<ITokenService, TokenService>();
 
+// Configurando o Identity para gerar as tabelas de logon dos usuï¿½rios
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
     .AddEntityFrameworkStores<AppDbContext>()
     .AddDefaultTokenProviders();
@@ -85,8 +86,12 @@ builder.Services.AddAuthentication(op =>
     op.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
 }).AddJwtBearer(op =>
 {
-    op.SaveToken = true;
-    op.RequireHttpsMetadata = false;
+    // salvar o token caso a operaÃ§Ã£o seja bem sucedida
+    op.SaveToken = true; 
+
+    // permitir que os dados possam ser trafegados somente em rotas https.
+    // em produï¿½ï¿½o normalmente esse paremetro deve ficar como true
+    op.RequireHttpsMetadata = false; 
     op.TokenValidationParameters = new TokenValidationParameters()
     {
         ValidateIssuer = true,
@@ -94,16 +99,21 @@ builder.Services.AddAuthentication(op =>
         ValidateLifetime = true,
         ValidateIssuerSigningKey = true,
         ClockSkew = TimeSpan.Zero,
-        ValidAudience = builder.Configuration["JWT:ValidAudience"],
+        ValidAudience = builder.Configuration["JWT:ValidAudiance"],
+        ValidIssuer = builder.Configuration["JWT:ValidIssuer"],
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes((secreteKey)))
     };
 });
 
-//aqui nos adicionamos aos serviços da aplicação a classe CustomLoggerProvider
-builder.Logging.AddProvider(new CustomLoggerProvider(new CustomLoggerProviderConfiguration
-{
-    LogLevel = LogLevel.Information
-}));
+// aqui nos adicionamos aos serviÃ§os da aplicaÃ§Ã£o a classe CustomLoggerProvider
+builder.Logging.AddProvider(
+    new CustomLoggerProvider(
+        new CustomLoggerProviderConfiguration
+        {
+            LogLevel = LogLevel.Information
+        }
+    )
+);
 
 var app = builder.Build();
 

@@ -16,12 +16,16 @@ namespace APICatalogo.Services
             var privateKey = Encoding.UTF8.GetBytes(key);
 
             var singningCredentials = new SigningCredentials(
-                new SymmetricSecurityKey(privateKey), SecurityAlgorithms.HmacSha256Signature);
+                new SymmetricSecurityKey(privateKey), 
+                SecurityAlgorithms.HmacSha256Signature);
 
             var tokenCredentials = new SecurityTokenDescriptor
             {
                 Subject = new ClaimsIdentity(claims),
-                Expires = DateTime.UtcNow.AddMinutes(_config.GetSection("JWT").GetValue<double>("TokenValidityInMinutes")),
+                Expires = DateTime.UtcNow.AddMinutes(_config
+                    .GetSection("JWT")
+                    .GetValue<double>("TokenValidityInMinutes")),
+
                 Audience = _config.GetSection("JWT").GetValue<string>("ValidAudiance"),
                 Issuer = _config.GetSection("JWT").GetValue<string>("ValidIssuer"),
                 SigningCredentials = singningCredentials,
@@ -47,7 +51,7 @@ namespace APICatalogo.Services
 
         public ClaimsPrincipal GetPrincipalFromExpiredToKen(string token, IConfiguration _config)
         {
-            var secreteKey = _config["JWT:SecreteKey"] ??
+            var secreteKey = _config["JWT:SecretKey"] ??
                 throw new InvalidOperationException("Invalid Secrete Key");
 
             var tokenValidationParameters = new TokenValidationParameters
@@ -60,7 +64,8 @@ namespace APICatalogo.Services
             };
 
             var tokenHandler = new JwtSecurityTokenHandler();
-            var principal = tokenHandler.ValidateToken(token, tokenValidationParameters, out SecurityToken securetyToken);
+            var principal = tokenHandler.ValidateToken(
+                token, tokenValidationParameters, out SecurityToken securetyToken);
 
             if (securetyToken is not JwtSecurityToken jwtSecurityToken ||
                 !jwtSecurityToken.Header.Alg.Equals(

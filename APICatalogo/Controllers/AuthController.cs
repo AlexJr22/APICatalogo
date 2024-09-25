@@ -41,7 +41,7 @@ namespace APICatalogo.Controllers
             {
                 var userRoles = await userManager.GetRolesAsync(user);
 
-                var authClaim = new List<Claim>
+                var authClaims = new List<Claim>
                 {
                     new Claim(ClaimTypes.Name, user.UserName!),
                     new Claim(ClaimTypes.Email, user.Email!),
@@ -50,14 +50,16 @@ namespace APICatalogo.Controllers
 
                 foreach (var userRole in userRoles)
                 {
-                    authClaim.Add(new Claim(ClaimTypes.Role, userRole));
+                    authClaims.Add(new Claim(ClaimTypes.Role, userRole));
                 }
 
-                var token = tokenService.GenerateAcessToken(authClaim, configuration);
+                var token = tokenService.GenerateAcessToken(authClaims, configuration);
 
                 var refreshToken = tokenService.GenerateRefreshToken();
 
                 _ = int.TryParse(configuration["JWT:RefreshTokenValidityInMinutes"], out int refreshTokenValidityInMinutes);
+
+                user.RefreshToken = refreshToken;
 
                 user.RefreshTokenExpireTime = DateTime.Now.AddMinutes(refreshTokenValidityInMinutes);
 
@@ -113,7 +115,7 @@ namespace APICatalogo.Controllers
                 return BadRequest("Invalid client request");
             }
 
-            string? accessToken = tokenModel.AcessToken
+            string? accessToken = tokenModel.AccessToken
                 ?? throw new ArgumentNullException(nameof(tokenModel));
 
             string? refreshToken = tokenModel.RefreshToken
@@ -137,6 +139,7 @@ namespace APICatalogo.Controllers
                 return BadRequest("Invalid access token/refresh token");
             }
 
+            // porque gerar um novo token de acesso se ele não esta salvando esse token?
             var newAccessToken = tokenService.GenerateAcessToken(
                 principal.Claims.ToList(), configuration);
 
@@ -158,7 +161,7 @@ namespace APICatalogo.Controllers
         public async Task<IActionResult> Revoke(string username)
         {
             var user = await userManager.FindByNameAsync(username);
-         
+
             if (user is null)
                 return BadRequest("Invalid user name");
 
