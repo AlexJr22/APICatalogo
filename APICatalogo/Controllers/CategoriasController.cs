@@ -44,15 +44,20 @@ public class CategoriasController : ControllerBase
     [HttpGet("{id:int}", Name = "ObterCategoria")]
     public async Task<ActionResult<CategoriaDTO>> Get(int id)
     {
-        var categoria = await _unitOfWork.categoriaRepository.GetAsync(
-            categ => categ.CategoriaId == id);
+        var categoria = await _unitOfWork.categoriaRepository
+            .GetAsync(
+                categ => categ.CategoriaId == id
+            );
 
         if (categoria is null)
         {
+            string message = $"Categoria com id={id} não encontrada...";
+
             _logger.LogWarning("=======================================");
-            _logger.LogWarning($"Categoria com id={id} não encontrada...");
+            _logger.LogWarning(message);
             _logger.LogWarning("=======================================");
-            return NotFound($"Categoria com id={id} não encontrada...");
+
+            return NotFound(message);
         }
 
         var categoriaDto = categoria.ToCategoriaDTO();
@@ -109,14 +114,14 @@ public class CategoriasController : ControllerBase
 
         var categoria = categoriaDto.ToCategoria();
 
-        var newCategoria = _unitOfWork.categoriaRepository.Create(categoria);
+        var newCategoria = _unitOfWork.categoriaRepository.Create(categoria!);
         await _unitOfWork.CommitAsync();
 
-        var newCategoriaDto = categoria.ToCategoriaDTO();
+        var newCategoriaDto = categoria!.ToCategoriaDTO();
 
         return new CreatedAtRouteResult(
             "ObterCategoria",
-            new { id = newCategoriaDto.CategoriaId },
+            new { id = newCategoriaDto!.CategoriaId },
             newCategoria);
     }
 
@@ -128,13 +133,14 @@ public class CategoriasController : ControllerBase
 
         var categoria = categoriaDto.ToCategoria();
 
-        _unitOfWork.categoriaRepository.Update(categoria);
+        _unitOfWork.categoriaRepository.Update(categoria!);
         await _unitOfWork.CommitAsync();
 
         return Ok(categoriaDto);
     }
 
     [HttpDelete("{id:int}")]
+    [Authorize(Policy = "AdminOnly")]
     public async Task<ActionResult<CategoriaDTO>> Delete(int id)
     {
         var categoria = await _unitOfWork.categoriaRepository.GetAsync(c => c.CategoriaId == id);
