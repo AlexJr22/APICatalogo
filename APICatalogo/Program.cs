@@ -1,4 +1,4 @@
-using System.Text;
+ using System.Text;
 using System.Text.Json.Serialization;
 using APICatalogo.Context;
 using APICatalogo.DTOs.Mappings;
@@ -12,12 +12,14 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Microsoft.AspNetCore.RateLimiting;
+using System.Threading.RateLimiting;
+using APICatalogo.RateLimitOptions;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder
-    .Services
+builder.Services
     .AddControllers(options =>
     {
         options.Filters.Add(typeof(ApiExceptionFilter));
@@ -28,43 +30,67 @@ builder
     })
     .AddNewtonsoftJson();
 
+builder.Services.AddCors(options =>
+{
+    // essa é uma política nomeada. 
+    options.AddPolicy(
+        name: "OriginsWithAccess",
+        policy =>
+        {
+            policy.WithOrigins("http://localhost:")
+            .WithMethods("GET", "POST")
+            .AllowAnyHeader();
+        }
+    );
+
+    // essa é uma política padrão, que não precisa ser nomeada
+    options.AddDefaultPolicy(
+        policy =>
+        {
+            policy.WithOrigins("https://apirequest.io")
+            .WithMethods("GET", "POST")
+            .AllowAnyHeader();
+        }
+    );
+});
+
+
 builder.Services.AddEndpointsApiExplorer();
-builder.Services
-    .AddSwaggerGen(c =>
-    {
-        c.SwaggerDoc("v1", new OpenApiInfo { Title = "apicatalogo", Version = "v1" });
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "apicatalogo", Version = "v1" });
 
-        c.AddSecurityDefinition(
-            "Bearer",
-            new OpenApiSecurityScheme()
-            {
-                Name = "Authorization",
-                Type = SecuritySchemeType.ApiKey,
-                Scheme = "Bearer",
-                BearerFormat = "JWT",
-                In = ParameterLocation.Header,
-                Description = "Bearer JWT",
-            }
-        );
+    c.AddSecurityDefinition(
+        "Bearer",
+        new OpenApiSecurityScheme()
+        {
+            Name = "Authorization",
+            Type = SecuritySchemeType.ApiKey,
+            Scheme = "Bearer",
+            BearerFormat = "JWT",
+            In = ParameterLocation.Header,
+            Description = "Bearer JWT",
+        }
+    );
 
-        c.AddSecurityRequirement(
-            new OpenApiSecurityRequirement
+    c.AddSecurityRequirement(
+        new OpenApiSecurityRequirement
+        {
             {
+                new OpenApiSecurityScheme
                 {
-                    new OpenApiSecurityScheme
+                    Reference = new OpenApiReference
                     {
-                        Reference = new OpenApiReference
-                        {
-                            Type = ReferenceType.SecurityScheme,
-                            Id = "Bearer"
-                        }
-                    },
+                        Type = ReferenceType.SecurityScheme,
+                        Id = "Bearer"
+                    }
+                },
 
-                    new string[] { }
-                }
+                new string[] { }
             }
-        );
-    });
+        }
+    );
+});
 
 string? SqlConnection = builder.Configuration.GetConnectionString("DefaultConnection");
 
@@ -76,36 +102,20 @@ builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddAutoMapper(typeof(ProdutoDTOMappingProfile));
 
-builder.Services.AddAuthorization(
-    options =>
-    {
-        options.AddPolicy(
-            "AdminOnly",
-            policy => policy.RequireRole("Adim")
-        );
-
-        options.AddPolicy(
-            "SuperAdminOnly",
-            policy => policy.RequireRole("Adim").RequireClaim("id", "Alex")
-        );
-
-        options.AddPolicy(
-            "User",
-            policy => policy.RequireRole("User")
-        );
-
-        options.AddPolicy(
-            "ExcluseviOnly",
-            policy => policy.RequireAssertion(
-                context => context.User.HasClaim(
-                    claim => claim.Type == "id" &&
-                    claim.Value == "Alex" ||
-                    context.User.IsInRole("SuperAdmin")
-                )
+builder.Services.AddAuthorizationBuilder()
+    .AddPolicy("AdminOnly", policy => policy.RequireRole("Adim"))
+    .AddPolicy("SuperAdminOnly", policy => policy.RequireRole("Adim").RequireClaim("id", "Alex"))
+    .AddPolicy("User", policy => policy.RequireRole("User"))
+    .AddPolicy(
+        "ExcluseviOnly",
+        policy => policy.RequireAssertion(
+            context => context.User.HasClaim(
+                claim => claim.Type == "id" &&
+                claim.Value == "Alex" ||
+                context.User.IsInRole("SuperAdmin")
             )
-        );
-    }
-);
+        )
+    );
 
 //builder.Services.AddAuthentication("Bearer").AddJwtBearer();
 builder.Services.AddScoped<ITokenService, TokenService>();
@@ -115,6 +125,46 @@ builder.Services
     .AddIdentity<ApplicationUser, IdentityRole>()
     .AddEntityFrameworkStores<AppDbContext>()
     .AddDefaultTokenProviders();
+
+// Rate Limit -> controla à quantidade de requisições que um usuário pode fazer um um determinado período
+
+var rateLimit = new MyRateLimitOptions();
+builder.Configuration.GetSection(MyRateLimitOptions.RateLimitParameters).Bind(rateLimit);
+
+builder.Services.AddRateLimiter(rateLimitOption =>
+{
+    rateLimitOption.AddFixedWindowLimiter("fixedWindow", options =>
+    {
+        options.PermitLimit = rateLimit.PermitLimit;
+        options.Window = TimeSpan.FromSeconds(rateLimit.Window);
+        options.QueueLimit = rateLimit.QueueLimit;
+        options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+    });
+
+    rateLimitOption.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+});
+
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    options.GlobalLimiter = PartitionedRateLimiter
+        .Create<HttpContext, string>(
+            httpcontext => RateLimitPartition.GetFixedWindowLimiter(
+                partitionKey:
+                    httpcontext.User.Identity?.Name ??
+                    httpcontext.Request.Headers.Host.ToString(),
+
+                factory: partition => new FixedWindowRateLimiterOptions
+                {
+                    AutoReplenishment = true,
+                    PermitLimit = 2,
+                    QueueLimit = 0,
+                    Window = TimeSpan.FromSeconds(10)
+                }
+            )
+        );
+});
 
 var secreteKey =
     builder.Configuration["JWT:SecretKey"] ?? throw new ArgumentException("Invalid Secret Key!");
@@ -164,6 +214,12 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseStaticFiles();
+app.UseRouting();
+
+app.UseRateLimiter();
+app.UseCors();
+
 app.UseAuthorization();
 app.MapControllers();
 app.Run();

@@ -1,19 +1,21 @@
 ﻿using APICatalogo.DTOs;
 using APICatalogo.DTOs.Mappings;
-using APICatalogo.Filters;
 using APICatalogo.Models;
 using APICatalogo.Pagination;
 using APICatalogo.Repositories;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Newtonsoft.Json;
 using X.PagedList;
 
 namespace APICatalogo.Controllers;
 
+[EnableCors("OriginsWithAccess")]
 [Route("[controller]")]
-[ServiceFilter(typeof(ApiLoggingFilter))]
 [ApiController]
+//[EnableRateLimiting("fixedWindow")]
 public class CategoriasController : ControllerBase
 {
     private readonly IUnitOfWork _unitOfWork;
@@ -27,8 +29,9 @@ public class CategoriasController : ControllerBase
         _unitOfWork = unitOfWork;
     }
 
+    [DisableRateLimiting]
     [HttpGet]
-    [Authorize]
+    //[Authorize]
     public async Task<ActionResult<IEnumerable<CategoriaDTO>>> Get()
     {
         var categorias = await _unitOfWork.categoriaRepository.GetAllAsync();
