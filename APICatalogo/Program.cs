@@ -1,4 +1,4 @@
- using System.Text;
+using System.Text;
 using System.Text.Json.Serialization;
 using APICatalogo.Context;
 using APICatalogo.DTOs.Mappings;
@@ -15,6 +15,7 @@ using Microsoft.OpenApi.Models;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
 using APICatalogo.RateLimitOptions;
+using Asp.Versioning;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -117,7 +118,6 @@ builder.Services.AddAuthorizationBuilder()
         )
     );
 
-//builder.Services.AddAuthentication("Bearer").AddJwtBearer();
 builder.Services.AddScoped<ITokenService, TokenService>();
 
 // Configurando o Identity para gerar as tabelas de logon dos usu�rios
@@ -166,9 +166,26 @@ builder.Services.AddRateLimiter(options =>
         );
 });
 
+builder.Services.AddApiVersioning(options =>
+{
+    options.DefaultApiVersion = new ApiVersion(1, 0);
+    options.AssumeDefaultVersionWhenUnspecified = true;
+    options.ReportApiVersions = true;
+    options.ApiVersionReader = ApiVersionReader.Combine(
+        new QueryStringApiVersionReader(),
+        new UrlSegmentApiVersionReader()
+    );
+
+}).AddApiExplorer(op =>
+{
+    op.GroupNameFormat = "'v'VVV";
+    op.SubstituteApiVersionInUrl = true;
+});
+
 var secreteKey =
     builder.Configuration["JWT:SecretKey"] ?? throw new ArgumentException("Invalid Secret Key!");
 
+//builder.Services.AddAuthentication("Bearer").AddJwtBearer();
 builder.Services
     .AddAuthentication(op =>
     {
