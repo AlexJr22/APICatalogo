@@ -15,6 +15,7 @@ namespace APICatalogo.Controllers;
 [EnableCors("OriginsWithAccess")]
 [Route("[controller]")]
 [ApiController]
+[Produces("application/json")]
 //[EnableRateLimiting("fixedWindow")]
 public class CategoriasController : ControllerBase
 {
@@ -29,9 +30,16 @@ public class CategoriasController : ControllerBase
         _unitOfWork = unitOfWork;
     }
 
-    [DisableRateLimiting]
-    [HttpGet]
+    ///<summary>
+    /// Obtem uma lista de objetos Categorias 
+    ///</summary>
+    ///<returns>Uma lista de objetos Categorias</returns>
+    ///<remarks>Retornar uma lista de objetos Categoria</remarks>
     //[Authorize]
+    [DisableRateLimiting]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [HttpGet]
     public async Task<ActionResult<IEnumerable<CategoriaDTO>>> Get()
     {
         var categorias = await _unitOfWork.categoriaRepository.GetAllAsync();
@@ -69,14 +77,16 @@ public class CategoriasController : ControllerBase
     }
 
     [HttpGet("pagination")]
-    public async Task<ActionResult<IEnumerable<CategoriaDTO>>> Get([FromQuery]CategoriasParameters _params)
+    public async Task<ActionResult<IEnumerable<CategoriaDTO>>> Get(
+        [FromQuery]CategoriasParameters _params)
     {
         var categorias = await _unitOfWork.categoriaRepository.GetCategoriasAsync(_params);
 
         return ObterCategorias(categorias);
     }
 
-    private ActionResult<IEnumerable<CategoriaDTO>> ObterCategorias(IPagedList<Categoria>? categorias)
+    private ActionResult<IEnumerable<CategoriaDTO>> ObterCategorias(
+        IPagedList<Categoria>? categorias)
     {
         if (categorias is null)
             return BadRequest();
@@ -129,6 +139,7 @@ public class CategoriasController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
+    [ApiConventionMethod(typeof(DefaultApiConventions), nameof(DefaultApiConventions.Put))]
     public async Task<ActionResult<CategoriaDTO>> Put(int id, CategoriaDTO categoriaDto)
     {
         if (id != categoriaDto.CategoriaId)
@@ -146,7 +157,8 @@ public class CategoriasController : ControllerBase
     [Authorize(Policy = "AdminOnly")]
     public async Task<ActionResult<CategoriaDTO>> Delete(int id)
     {
-        var categoria = await _unitOfWork.categoriaRepository.GetAsync(c => c.CategoriaId == id);
+        var categoria = await _unitOfWork.categoriaRepository
+            .GetAsync(c => c.CategoriaId == id);
 
         if (categoria is null)
         {

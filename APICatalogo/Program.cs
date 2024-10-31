@@ -16,19 +16,18 @@ using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
 using APICatalogo.RateLimitOptions;
 using Asp.Versioning;
+using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services
-    .AddControllers(options =>
-    {
+builder.Services.AddControllers(options =>
+{
         options.Filters.Add(typeof(ApiExceptionFilter));
-    })
-    .AddJsonOptions(options =>
-    {
-        options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
-    })
+}).AddJsonOptions(options =>
+{
+    options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+})
     .AddNewtonsoftJson();
 
 builder.Services.AddCors(options =>
@@ -44,7 +43,7 @@ builder.Services.AddCors(options =>
         }
     );
 
-    // essa é uma política padrão, que não precisa ser nomeada
+    // essa é uma política padrão, por isso ela não precisa ser nomeada
     options.AddDefaultPolicy(
         policy =>
         {
@@ -59,7 +58,29 @@ builder.Services.AddCors(options =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new OpenApiInfo { Title = "apicatalogo", Version = "v1" });
+    //c.SwaggerDoc("v1", new OpenApiInfo { Title = "apicatalogo", Version = "v1" });
+
+    c.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Version = "v1",
+        Title = "ApiCatalogo",
+        Description = "Catálogo de produtos e Categorias",
+        TermsOfService = new Uri("https://Exemplo.com/terms"),
+        Contact = new OpenApiContact
+        {
+            Name = "Alex",
+            Email = "Alex@gmail.com",
+            Url = new Uri("https://Exemplo.com")
+        },
+        License = new OpenApiLicense
+        {
+            Name = "Usar sobre LICX",
+            Url = new Uri("https://Exemplo.com/license"),
+        }
+    });
+
+    string xmlFileName = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    c.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, xmlFileName));
 
     c.AddSecurityDefinition(
         "Bearer",

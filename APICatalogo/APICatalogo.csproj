@@ -4,9 +4,12 @@
 		<Nullable>enable</Nullable>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<InvariantGlobalization>true</InvariantGlobalization>
-	  <UserSecretsId>75c1a9cc-201e-4de7-8b0e-4dff4a2f9d6f</UserSecretsId>
-  </PropertyGroup>
-	
+		<UserSecretsId>75c1a9cc-201e-4de7-8b0e-4dff4a2f9d6f</UserSecretsId>
+		<GenerateDocumentationFile>True</GenerateDocumentationFile>
+		<IncludeOpenApiAnalyzers>true</IncludeOpenApiAnalyzers>
+		<NoWarn>$(NoWarn);1591</NoWarn>
+	</PropertyGroup>
+
 	<ItemGroup>
 		<PackageReference Include="Asp.Versioning.Http" Version="8.1.0" />
 		<PackageReference Include="Asp.Versioning.Mvc.ApiExplorer" Version="8.1.0" />
