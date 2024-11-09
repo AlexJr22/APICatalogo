@@ -1,5 +1,4 @@
 ﻿using APICatalogo.Context;
-using APICatalogo.DTOs;
 using APICatalogo.DTOs.Mappings;
 using APICatalogo.Repositories;
 using AutoMapper;
@@ -14,12 +13,13 @@ namespace APICatalogo_xUnitTest.UnitTests
         public static DbContextOptions<AppDbContext> dbContextOptions { get; }
 
         public static string connectionString =
-            "\"Data Source=.\\\\mydb.db;\"";
+            "Data Source=C:\\Users\\alexj\\Documents\\Curso Macoratti\\AspNet\\Projetos\\APICatalogo\\APICatalogo\\mydb.db";
 
+        // configurando o acesso ao dbcontext
         static ProdutosUnitTestController()
         {
             dbContextOptions = new DbContextOptionsBuilder<AppDbContext>()
-                .UseSqlite()
+                .UseSqlite("Data Source=C:\\Users\\alexj\\Documents\\Curso Macoratti\\AspNet\\Projetos\\APICatalogo\\APICatalogo\\mydb.db")
                 .Options;
         }
 
